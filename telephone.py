@@ -1,7 +1,20 @@
 #! -*- coding:utf-8 -*-
 
 import re
-from rep_tools import *
+from utils import *
+
+tele_pt = re.compile(
+    '(?:[^\d\.]|^)('  # start with num and end with num, eg: 我的电话号码是133...78，it will be matched start with 1 and end with 8
+    '13[0-9]\d{8}|'  # start with 13, eg: 13312345678
+    '14[579]\d{8}|'  # start with 14
+    '15[0-3,5-9]\d{8}|'  # start with 15
+    '166\d{8}|'  # start with 16
+    '17[0-3,5-8]\d{8}|'  # start with 16
+    '18[0,5-9]\d{8}|'  # start with 18
+    '198\d{8}'  # start with 19
+    ')(?:[^\d\.]|$)'
+)
+
 
 def get_telephone(text):
     """
@@ -17,20 +30,10 @@ def get_telephone(text):
     i = 0
 
     while 1:
-        telephone = re.search(
-            '(?:[^\d\.]|^)('  # start with num and end with num, eg: 我的电话号码是133...78，it will be matched start with 1 and end with 8
-            '13[0-9]\d{8}|'  # start with 13, eg: 13312345678
-            '14[579]\d{8}|'  # start with 14
-            '15[0-3,5-9]\d{8}|'  # start with 15
-            '166\d{8}|'  # start with 16
-            '17[0-3,5-8]\d{8}|'  # start with 16
-            '18[0,5-9]\d{8}|'  # start with 18
-            '198\d{8}'  # start with 19
-            ')(?:[^\d\.]|$)', text
-        )
+        telephone = tele_pt.search(text)
         if telephone is None:
             break
-        text = text.replace(telephone.group(1), '/tele%s/' % str(i), 1)
+        text = text.replace(telephone.group(1), '/tele%d/' % i, 1)
         telephones.append(telephone.group(1))
         i += 1
 

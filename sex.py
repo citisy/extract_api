@@ -1,7 +1,11 @@
 #! -*- coding:utf-8 -*-
 
 import re
-from rep_tools import *
+from utils import *
+
+with open('sex/sex.txt', 'r', encoding='utf8') as f:
+    sex_str = f.read().replace('\n', '|')
+sex_pt = re.compile(sex_str)
 
 
 def get_sex(text):
@@ -9,13 +13,10 @@ def get_sex(text):
     i = 0
 
     while 1:
-        sex = re.search(
-            u'男|先生|叔叔|哥哥|GG|gg|女|小姐|阿姨|姐姐|妹子|MM|mm',
-            text
-        )
+        sex = sex_pt.search(text)
         if sex is None:
             break
-        text = text.replace(sex.group(0), '/sex%s/' % str(i), 1)
+        text = text.replace(sex.group(0), '/sex%d/' % i, 1)
         sexes.append(sex.group(0))
         i += 1
 

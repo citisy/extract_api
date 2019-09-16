@@ -1,7 +1,9 @@
 #! -*- coding:utf-8 -*-
 
 import re
-from rep_tools import *
+from utils import *
+
+stamp_pt = re.compile('(?:邮证?编码?[：:是]?)(\d{6})(?=\D|$)')
 
 
 def get_stamp(text):
@@ -9,13 +11,10 @@ def get_stamp(text):
     i = 0
 
     while 1:
-        stamp = re.search(
-            u'(?:邮证?编码?[：:是]?)(\d{6})(?=\D|$)',
-            text
-        )
+        stamp = stamp_pt.search(text)
         if stamp is None:
             break
-        text = text.replace(stamp.group(1), '/stamp%s/' % str(i), 1)
+        text = text.replace(stamp.group(1), '/stamp%d/' % i, 1)
         stamps.append(stamp.group(1))
         i += 1
 

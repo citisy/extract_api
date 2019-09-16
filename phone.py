@@ -1,26 +1,25 @@
 #! -*- coding:utf-8 -*-
 
 import re
-import codecs
-from rep_tools import *
+from utils import *
 
 
 phone_str = '(?:[^\d\.]|^)((?:'
-for line in codecs.open('phone/internation.txt', 'r', encoding='utf8'):
-    phone_str += '00' + line.replace('\n', '').replace(' ', '') + '|'
+for line in open('phone/internation.txt', 'r', encoding='utf8'):
+    phone_str += '00' + line.replace('\n', '|')
 
-phone_str = phone_str[:-1] + ')-\d{7,8}|(?:'  # international phone
+phone_str += ')-\d{7,8}|(?:'  # international phone
 
-for line in codecs.open('phone/nation.txt', 'r', encoding='utf8'):
-    phone_str += line.replace('\n', '').replace(' ', '') + '|'
+for line in open('phone/nation.txt', 'r', encoding='utf8'):
+    phone_str += line.replace('\n', '|')
 
-phone_str = phone_str[:-1] + ')?[-]?[2-8]\d{6,7}|'  # chinese phone
+phone_str += ')?[-]?[2-8]\d{6,7}|'  # chinese phone
 
-for line in codecs.open('phone/special.txt', 'r', encoding='utf8'):  # special phone, eg: 110
-    phone_str += line.replace('\n', '').replace(' ', '') + '|'
+for line in open('phone/special.txt', 'r', encoding='utf8'):  # special phone, eg: 110
+    phone_str += line.replace('\n', '|')
 
-phone_str += '[48]00-?\d{7,8}|[48]00\d-\d{3}-\d{3}|[48]00-\d{3}-\d{4}|9[56]\d{3})(?:[^\d\.]|$)'
-phone_str = re.compile(phone_str)
+phone_str += '|[48]00-?\d{7,8}|[48]00\d-\d{3}-\d{3}|[48]00-\d{3}-\d{4}|9[56]\d{3})(?:[^\d\.]|$)'
+phone_pt = re.compile(phone_str)
 
 
 def get_phone(text):
@@ -37,10 +36,10 @@ def get_phone(text):
     i = 0
 
     while 1:
-        phone = re.search(phone_str, text)
+        phone = phone_pt.search(text)
         if phone is None:
             break
-        text = text.replace(phone.group(1), '/phone%s/' % str(i), 1)
+        text = text.replace(phone.group(1), '/phone%d/' % i, 1)
         phones.append(phone.group(1))
         i += 1
 

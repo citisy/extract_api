@@ -1,5 +1,7 @@
 import re
 import jieba.posseg as pseg
+from utils import *
+
 
 def get_org(text):
     words = pseg.cut(text)
@@ -14,12 +16,14 @@ def get_org(text):
         r = re.search(org, text)
         if r:
             span_text[r.span()] = 'org'
-            text = text.replace(org, '/job%s/' % str(i), 1)
+            text = text.replace(org, '/org%d/' % i, 1)
 
+    _, span_text = replace_text(text, orgs, 'org')
     return span_text, text
 
+
 if __name__ == '__main__':
-    text = u'我在中国人民银行和中国人民银行上班'
+    text = u'中国人民银行，简称央行，是中华人民共和国的中央银行，中华人民共和国国务院组成部门'
     span_text, text_ = get_org(text)
     print(span_text)
     for k, v in span_text.items():

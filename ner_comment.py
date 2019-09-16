@@ -1,26 +1,19 @@
 #! -*- coding: utf-8 -*-
 
-import requests
-import json
-import re
 from gensim.models.word2vec import Word2Vec
 import numpy as np
-from rep_tools import *
-import codecs
+import jieba.posseg as pseg
 
 cmt = []
-for line in codecs.open('comment/c.txt', 'r', encoding='utf8'):
+for line in open('comment/c.txt', 'r', encoding='utf8'):
     cmt.append(line.replace('\n', '').split(' '))
 sentiment_ = {-1: '消极', 1: '积极', 2: '未检测到极性', 0: '中性'}
 degree = []
-for line in codecs.open('comment/degree.txt', 'r', encoding='utf8'):
+for line in open('comment/degree.txt', 'r', encoding='utf8'):
     degree.append(line.replace('\n', ''))
 degree = degree[::-1]
-loc_str = ''
-for line in codecs.open('loc/loc.txt', 'r', encoding='utf8'):
-    loc_str += line.replace('\n', '') + '|'
-loc_str = loc_str[:-1]
-wv_model = Word2Vec.load('hyapi/sg.model')
+
+wv_model = Word2Vec.load('wv/sg.model')
 embedding_var = np.zeros((len(cmt), 128))
 for k, v in enumerate(cmt):
     try:
@@ -36,141 +29,28 @@ class node:
         self.children = []
 
 
-class just_a_class():
+class NerComment():
     def __init__(self, text):
         self.text = text
-        self.js = self.get_js(text)
-
-    def get_per(self):
-        try:
-            span_text = {}
-            pers = []
-            for i in self.js['items']:
-                if i['ne'] == 'PER':
-                    pers.append(i['item'])
-            for i in pers:
-                r = re.search(i, self.text)
-                if r:
-                    span_text[r.span()] = 'per'
-            return span_text
-        except KeyError:
-            return []
-
-    def get_org(self):
-        try:
-            span_text = {}
-            orgs = []
-            for i in self.js['items']:
-                if i['ne'] == 'ORG':
-                    orgs.append(i['item'])
-            for i in orgs:
-                r = re.search(i, self.text)
-                if r:
-                    span_text[r.span()] = 'org'
-            return span_text
-        except KeyError:
-            return []
-
-    def get_loc(self):
-        try:
-            locs = []
-            orgs = []
-            for i in self.js['items']:
-                if i['ne'] == 'ORG':
-                    orgs.append(i['item'])
-                if i['ne'] == 'LOC':
-                    locs.append(i['item'])
-        except KeyError:
-            return []
-        text = self.text
-        for i, _ in enumerate(locs):
-            text = text.replace(_, u'/loc%s/' % str(i), 1)
-        for i, _ in enumerate(orgs):
-            text = text.replace(_, u'/org%s/' % str(i), 1)
-        while 1:  # ns/loc + loc_str/org
-            ti = re.search(u'/loc(\d+)/([\w、+-]{0,7}(?:' + loc_str + ')|/org(\d+)/)', text)
-            if ti is None:
-                break
-            _ = ti.group(0)
-            if ti.group(1):
-                _ = _.replace(u'/loc%s/' % ti.group(1), locs[int(ti.group(1))])
-            if ti.group(3):
-                _ = _.replace(u'/org%s/' % ti.group(3), orgs[int(ti.group(3))])
-            text = text.replace(ti.group(0), u'/loc%s/' % ti.group(1))
-            locs[int(ti.group(1))] = _
-        while 1:  # org + loc_str
-            ti = re.search(u'/org(\d+)/([\w、+-]{,7}(?:' + loc_str + '))', text)
-            if ti is None:
-                break
-            locs.append(orgs[int(ti.group(1))] + ti.group(2))
-            text = text.replace(ti.group(0), u'/loc%s/' % str(len(locs)))
-        while 1:  # loc + loc
-            ti = re.search(u'(/loc\d+/近?){2,}', text)
-            if ti is None:
-                break
-            s = ti.group(0)
-            n = re.findall('\d+', s)
-            text = text.replace(s, u'/loc%s/' % n[0], 1)
-            for i, j in enumerate(n):
-                s = s.replace(u'/loc%s/' % j, locs[(int(j))])
-                locs[(int(j))] = ''
-            locs[int(n[0])] = s
-        while 1:  # loc + num
-            ti = re.search(u'/loc(\d+)/([甲乙丙丁东南西北中前后左右a-zA-Z0-9、-]+米?)', text)
-            if ti is None:
-                break
-            text = text.replace(ti.group(0), u'/loc%s/' % ti.group(1))
-            if len(locs[int(ti.group(1))]) <= 4:
-                continue
-            else:
-                locs[int(ti.group(1))] += ti.group(2)
-        text, span_text = replace_text(text, locs, 'loc')
-        return span_text
-
-    def get_js(self, text):
-        sess = requests.session()
-        ip = '10143735'
-        apikey = 'LHPOEDOgGOEiVpPgOIanepaE'
-        sk = '8DyoLlwmjRMIYgCM4kSxdYRT6N1MVGNG'
-        keyurl = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id=LHPOEDOgGOEiVpPgOIanepaE&client_secret=8DyoLlwmjRMIYgCM4kSxdYRT6N1MVGNG'
-        html = sess.get(keyurl)
-        js = json.loads(html.text)
-        ner_url = 'https://aip.baidubce.com/rpc/2.0/nlp/v1/lexer?charset=UTF-8&access_token=%s' % js['access_token']
-        rejs = {
-            'text': text
-        }
-        header = {
-            'Content-Type': 'json'
-        }
-        html = sess.post(url=ner_url, json=rejs, headers=header)
-        js = json.loads(html.text)
-        return js
 
     def get_comment(self):
         # -------- extract ----------
         # get word is conformed to the rules
         # return sl -> 3-D list, 0d -> sens, 1d -> words, 2d -> word's attributes
-        try:
-            self.js['items']
-        except KeyError:
-            return []
         root = self.make_tree()
         pn = root
         s = []  # [depth, word, pos]
         sl = []  # [(sen1)[[depth1, word1, pos1], ...], [[]], ...]
-        textt = ''
-        for i in self.js['items']:
-            # print(i['item'], i['ne'], i['pos'])
-            textt += '%s/%s ' % (i['item'], i['pos'])
-            if i['pos'] in 'fmst':  # pos in 'fmst' is stopword
+        for word, tag in pseg.cut(text):
+            if tag in 'fmst':  # pos in 'fmst' is stopword
                 continue
-            if i['pos'] in 'uq':  # specially, let word '的' be the stopword
-                if i['item'] != u'的':
+            if tag in 'uq':  # specially, let word '的' be the stopword
+                if word != u'的':
                     continue
-            if i['pos'] == 'an':  # let the 'an' be the 'a'
-                i['pos'] = 'a'
-            if i['item'] in [u'好评', u'差评', u'标准', u'棒棒']:  # specially, let these words be the 'a'
-                i['pos'] = 'a'
+            if tag == 'an':  # let the 'an' be the 'a'
+                tag = 'a'
+            if word in [u'好评', u'差评', u'标准', u'棒棒']:  # specially, let these words be the 'a'
+                tag = 'a'
             for child in pn.children:  # child.data -> [pos, depth]
                 if child.data[0] == 'o':
                     if child.children > 0:
@@ -193,15 +73,15 @@ class just_a_class():
                     pn = root
                     s = []
                     for _ in pn.children:
-                        if _.data[0] in i['pos']:
-                            s.append([_.data[1], i['item'], _.data[0]])
+                        if _.data[0] in tag:
+                            s.append([_.data[1], word, _.data[0]])
                             pn = _
                             break
-                elif child.data[0] in i['pos']:
-                    s.append([child.data[1], i['item'], child.data[0]])
+                elif child.data[0] in tag:
+                    s.append([child.data[1], word, child.data[0]])
                     pn = child
                     break
-            if i['pos'] == 'w' and i['item'] not in u'，、： ':
+            if tag == 'w' and word not in u'，、： ':
                 sl.append([[-1, '', 'n']])
         # -------- extract ----------
 
@@ -263,12 +143,12 @@ class just_a_class():
         # specially, add some cmt to sl
         posl = ''
         segl = []
-        for i in self.js['items']:  # if 'waw', add 主体 -> '感觉', eg: 房间很大，很棒。-> 房间很大，感觉很棒。
-            if i['pos'] != 'w':
-                posl += i['pos']
-                segl.append(i['item'])
+        for word, tag in pseg.cut(text):  # if 'waw', add 主体 -> '感觉', eg: 房间很大，很棒。-> 房间很大，感觉很棒。
+            if tag != 'w':
+                posl += tag
+                segl.append(word)
 
-            elif i['item'] in u'，。！：？；、':  # some punctuation cant' cut the seg, like '《》（）'
+            elif word in u'，。！：？；、':  # some punctuation cant' cut the seg, like '《》（）'
                 """
                 can't access example: wanw, wdw, ww
                 eg: 
@@ -374,12 +254,6 @@ if __name__ == '__main__':
     # text = '北京的风景很美环境不错，很棒'
     text = u'李梅梅在广州黄埔花园买了部非常不智能的手机，是三星品牌的'
     # text = '风景不漂亮'
-    c = just_a_class(text)
-    span_text = c.get_per()
-    print(span_text)
-    span_text = c.get_org()
-    print(span_text)
-    span_text = c.get_loc()
-    print(span_text)
+    c = NerComment(text)
     comments = c.get_comment()
     print(comments)

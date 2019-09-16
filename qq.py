@@ -1,16 +1,15 @@
 #! -*- coding:utf-8 -*-
 
 import re
-import codecs
-from rep_tools import *
+from utils import *
 
 
 qq_str = '(?:'
-for line in codecs.open('qq/qq.txt', 'r', encoding='utf8'):
-    qq_str += line.replace('\n', '').replace('q', u'[qQ扣]') + '|'
+with open('qq/qq.txt', 'r', encoding='utf8') as f:
+    qq_str += f.read().replace('\n', '|').replace('q', u'[qQ扣]')
 
-qq_str = qq_str[:-1] + ')(\d{5,11})(?=\D|$)'
-qq_str = re.compile(qq_str)
+qq_str += ')(\d{5,11})(?=\D|$)'
+qq_pt = re.compile(qq_str)
 
 
 def get_qq(text):
@@ -18,13 +17,10 @@ def get_qq(text):
     i = 0
 
     while 1:
-        qq = re.search(
-            qq_str,
-            text
-        )
+        qq = qq_pt.search(text)
         if qq is None:
             break
-        text = text.replace(qq.group(1), '/qq%s/' % str(i), 1)
+        text = text.replace(qq.group(1), '/qq%d/' % i, 1)
         qqs.append(qq.group(1))
         i += 1
 

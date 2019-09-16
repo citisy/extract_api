@@ -1,7 +1,12 @@
 #! -*- coding:utf-8 -*-
 
 import re
-from rep_tools import *
+from utils import *
+
+with open('age/age.txt', 'r', encoding='utf8') as f:
+    age_str = f.read().replace('\n', '|')
+
+age_pt = re.compile(age_str)
 
 
 def get_age(text):
@@ -9,13 +14,10 @@ def get_age(text):
     i = 0
 
     while 1:
-        age = re.search(
-            u'\d{1,3}岁|而立|不惑|知天?命|花甲|耳顺|古稀|鲐背|耄耋|期颐',
-            text
-        )
+        age = age_pt.search(text)
         if age is None:
             break
-        text = text.replace(age.group(0), '/age%s/' % str(i), 1)
+        text = text.replace(age.group(0), '/age%d/' % i, 1)
         ages.append(age.group(0))
         i += 1
 
